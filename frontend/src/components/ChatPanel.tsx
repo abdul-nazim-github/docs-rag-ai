@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { queryRAGStream } from "@/lib/api";
 import type { ChatMessage, SourceInfo } from "@/lib/types";
 
@@ -9,8 +10,8 @@ interface ChatPanelProps {
 }
 
 /**
- * Chat interface — user sends questions, assistant replies with
- * AI-generated answers and source citations.
+ * Conversational chat interface — user bubbles on the right,
+ * assistant bubbles on the left with markdown rendering.
  */
 export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -38,7 +39,6 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
     const question = input.trim();
     if (!question || isLoading) return;
 
-    // Add user message
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -46,7 +46,6 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
       timestamp: new Date(),
     };
 
-    // Add empty assistant message that will be populated by the stream
     const assistantId = crypto.randomUUID();
     const initialAssistantMsg: ChatMessage = {
       id: assistantId,
@@ -72,7 +71,6 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
       let assistantSources: SourceInfo[] = [];
       let buffer = "";
 
-      // Hide global typing spinner since stream has started
       setIsLoading(false);
 
       while (true) {
@@ -81,7 +79,6 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
-        // Keep the last partial line in the buffer
         buffer = lines.pop() || "";
 
         for (const line of lines) {
@@ -118,7 +115,6 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
         }
       }
     } catch (err) {
-      // In case of error, update the streaming message content with the error description
       const errorMessage =
         err instanceof Error
           ? `Sorry, an error occurred: ${err.message}`
@@ -137,7 +133,7 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
     }
   }, [input, isLoading]);
 
-  // ── Key handler (Enter to send, Shift+Enter for newline) ──────────────
+  // ── Key handler ───────────────────────────────────────────────────────
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -217,24 +213,11 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`chat-message ${msg.role === "user" ? "message-user" : "message-assistant"}`}
+              className={`msg-row ${msg.role === "user" ? "msg-row--user" : "msg-row--assistant"}`}
             >
-              <div className="message-avatar">
-                {msg.role === "user" ? (
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                ) : (
+              {/* Avatar — shown on the outer edge of each bubble */}
+              {msg.role === "assistant" && (
+                <div className="msg-avatar msg-avatar--assistant">
                   <svg
                     width="18"
                     height="18"
@@ -249,35 +232,41 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
                     <path d="M2 17l10 5 10-5" />
                     <path d="M2 12l10 5 10-5" />
                   </svg>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div className="message-content">
-                <div className="message-header">
-                  <span className="message-role">
+              <div className={`msg-bubble ${msg.role === "user" ? "msg-bubble--user" : "msg-bubble--assistant"}`}>
+                {/* Role label + time */}
+                <div className="msg-meta">
+                  <span className="msg-role">
                     {msg.role === "user" ? "You" : "AI Assistant"}
                   </span>
-                  <span className="message-time">
-                    {formatTime(msg.timestamp)}
-                  </span>
+                  <span className="msg-time">{formatTime(msg.timestamp)}</span>
                 </div>
 
-                <div className="message-text">
-                  {msg.content.split("\n").map((line, i) => (
-                    <p key={i}>{line || "\u00A0"}</p>
-                  ))}
+                {/* Message body */}
+                <div className="msg-body">
+                  {msg.role === "assistant" ? (
+                    /* Render markdown for assistant replies */
+                    <ReactMarkdown>{msg.content || "…"}</ReactMarkdown>
+                  ) : (
+                    /* Plain text for user messages */
+                    msg.content.split("\n").map((line, i) => (
+                      <p key={i}>{line || "\u00A0"}</p>
+                    ))
+                  )}
                 </div>
 
-                {/* Source citations */}
+                {/* Source citations — assistant only */}
                 {msg.sources && msg.sources.length > 0 && (
-                  <div className="message-sources">
-                    <span className="sources-label">Sources:</span>
+                  <div className="msg-sources">
+                    <span className="msg-sources__label">Sources</span>
                     {msg.sources.map((source, i) => (
-                      <div key={i} className="source-chip">
-                        <span className="source-filename">
+                      <div key={i} className="msg-source-chip">
+                        <span className="msg-source-chip__name">
                           📄 {source.filename}
                         </span>
-                        <span className="source-snippet">
+                        <span className="msg-source-chip__snippet">
                           {source.snippet}
                         </span>
                       </div>
@@ -285,14 +274,32 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
                   </div>
                 )}
               </div>
+
+              {msg.role === "user" && (
+                <div className="msg-avatar msg-avatar--user">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+              )}
             </div>
           ))
         )}
 
         {/* Loading indicator */}
         {isLoading && (
-          <div className="chat-message message-assistant">
-            <div className="message-avatar">
+          <div className="msg-row msg-row--assistant">
+            <div className="msg-avatar msg-avatar--assistant">
               <svg
                 width="18"
                 height="18"
@@ -308,7 +315,7 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
                 <path d="M2 12l10 5 10-5" />
               </svg>
             </div>
-            <div className="message-content">
+            <div className="msg-bubble msg-bubble--assistant">
               <div className="typing-indicator">
                 <span className="typing-dot" />
                 <span className="typing-dot" />
