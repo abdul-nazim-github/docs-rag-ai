@@ -1,0 +1,49 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
+
+# Virtual Environment
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Vector Database
+backend/vectorstore/
+
+# Uploaded Files
+backend/data/uploads/
+
+# Logs
+*.log
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Node
+frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+htmlcov/
+
+# Build
+dist/
+build/
