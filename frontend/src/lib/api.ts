@@ -69,14 +69,24 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
 // ── Query ─────────────────────────────────────────────────────────────────────
 
 /**
- * Send a question to the RAG chain and receive an AI-generated answer.
+ * Send a question to the RAG chain and receive a real-time stream of answers.
  */
-export async function queryRAG(question: string): Promise<QueryResponse> {
-  return apiFetch<QueryResponse>("/api/query", {
+export async function queryRAGStream(question: string): Promise<Response> {
+  const url = `${API_URL}/api/query`;
+  const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
   });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    const message =
+      errorBody?.detail || `API error: ${response.status} ${response.statusText}`;
+    throw new Error(message);
+  }
+
+  return response;
 }
 
 // ── Documents ─────────────────────────────────────────────────────────────────

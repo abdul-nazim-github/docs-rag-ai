@@ -99,6 +99,49 @@ class RAGChain:
         logger.info("Generated answer with %d source(s).", len(sources))
         return {"answer": answer, "sources": sources}
 
+    async def stream_query(self, question: str, k: int = 4):
+        """
+        Run the full RAG pipeline and yield chunks.
+
+        Yields:
+            Dict representing chunk type and content/sources.
+        """
+        if not vector_store_manager.is_ready:
+            yield {
+                "type": "content",
+                "content": (
+                    "No documents have been uploaded yet. "
+                    "Please upload at least one document before asking questions."
+                ),
+            }
+            return
+
+        logger.info("RAG stream query: %s (k=%d)", question, k)
+
+        # Retrieve relevant chunks
+        retriever = vector_store_manager.get_retriever(k=k)
+        relevant_docs: list[Document] = retriever.invoke(question)
+
+        # Extract unique sources
+        sources = self._extract_sources(relevant_docs)
+        
+        # Send sources first
+        yield {"type": "sources", "sources": sources}
+
+        # Format context
+        context = self._format_context(relevant_docs)
+
+        # Build and stream the chain
+        chain = (
+            {"context": RunnablePassthrough(), "question": RunnablePassthrough()}
+            | self._prompt
+            | self._llm
+            | self._output_parser
+        )
+
+        async for chunk in chain.astream({"context": context, "question": question}):
+            yield {"type": "content", "content": chunk}
+
     # ── Private helpers ────────────────────────────────────────────────────────
 
     @staticmethod

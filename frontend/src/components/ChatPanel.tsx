@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { queryRAG } from "@/lib/api";
-import type { ChatMessage } from "@/lib/types";
+import { queryRAGStream } from "@/lib/api";
+import type { ChatMessage, SourceInfo } from "@/lib/types";
 
 interface ChatPanelProps {
   hasDocuments: boolean;
@@ -46,34 +46,91 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    // Add empty assistant message that will be populated by the stream
+    const assistantId = crypto.randomUUID();
+    const initialAssistantMsg: ChatMessage = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      sources: [],
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMsg, initialAssistantMsg]);
     setInput("");
     setIsLoading(true);
 
     try {
-      const response = await queryRAG(question);
+      const response = await queryRAGStream(question);
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Failed to get reader from response stream.");
+      }
 
-      const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: response.answer,
-        sources: response.sources,
-        timestamp: new Date(),
-      };
+      const decoder = new TextDecoder("utf-8");
+      let assistantContent = "";
+      let assistantSources: SourceInfo[] = [];
+      let buffer = "";
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      // Hide global typing spinner since stream has started
+      setIsLoading(false);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+
+          const jsonStr = trimmed.slice(6);
+          try {
+            const chunk = JSON.parse(jsonStr);
+            if (chunk.type === "sources") {
+              assistantSources = chunk.sources;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId
+                    ? { ...msg, sources: assistantSources }
+                    : msg
+                )
+              );
+            } else if (chunk.type === "content") {
+              assistantContent += chunk.content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                )
+              );
+            } else if (chunk.type === "error") {
+              throw new Error(chunk.content);
+            }
+          } catch (err) {
+            console.error("Error parsing stream chunk:", err);
+          }
+        }
+      }
     } catch (err) {
-      const errorMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content:
-          err instanceof Error
-            ? `Sorry, an error occurred: ${err.message}`
-            : "Sorry, something went wrong. Please try again.",
-        timestamp: new Date(),
-      };
+      // In case of error, update the streaming message content with the error description
+      const errorMessage =
+        err instanceof Error
+          ? `Sorry, an error occurred: ${err.message}`
+          : "Sorry, something went wrong. Please try again.";
 
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantId
+            ? { ...msg, content: errorMessage }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();

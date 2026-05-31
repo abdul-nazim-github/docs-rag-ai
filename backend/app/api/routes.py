@@ -12,10 +12,12 @@ Endpoints:
 from __future__ import annotations
 
 import logging
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 from app.api.schemas import (
     DocumentInfo,
@@ -119,27 +121,22 @@ async def upload_document(file: UploadFile) -> UploadResponse:
 
 @router.post(
     "/query",
-    response_model=QueryResponse,
-    summary="Query the RAG chain",
+    summary="Query the RAG chain (streaming)",
 )
-async def query_documents(request: QueryRequest) -> QueryResponse:
+async def query_documents(request: QueryRequest) -> StreamingResponse:
     """
     Ask a question about the uploaded documents. The RAG chain retrieves
-    relevant context and generates an answer using OpenAI.
+    relevant context and streams generated answers in real time using OpenAI.
     """
-    try:
-        result = await rag_chain.query(request.question)
-    except Exception as exc:
-        logger.exception("RAG query failed: %s", request.question)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Query failed: {exc}",
-        ) from exc
+    async def event_generator():
+        try:
+            async for chunk in rag_chain.stream_query(request.question):
+                yield f"data: {json.dumps(chunk)}\n\n"
+        except Exception as exc:
+            logger.exception("RAG streaming query failed: %s", request.question)
+            yield f"data: {json.dumps({'type': 'error', 'content': str(exc)})}\n\n"
 
-    return QueryResponse(
-        answer=result["answer"],
-        sources=[SourceInfo(**s) for s in result["sources"]],
-    )
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 # ── Documents ──────────────────────────────────────────────────────────────────
