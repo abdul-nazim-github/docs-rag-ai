@@ -71,8 +71,6 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
       let assistantSources: SourceInfo[] = [];
       let buffer = "";
 
-      setIsLoading(false);
-
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -210,119 +208,110 @@ export default function ChatPanel({ hasDocuments }: ChatPanelProps) {
             )}
           </div>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`msg-row ${msg.role === "user" ? "msg-row--user" : "msg-row--assistant"}`}
-            >
-              {/* Avatar — shown on the outer edge of each bubble */}
-              {msg.role === "assistant" && (
-                <div className="msg-avatar msg-avatar--assistant">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                </div>
-              )}
+          messages.map((msg, index) => {
+            const isLatest = index === messages.length - 1;
+            const isGenerating = isLatest && isLoading && msg.role === "assistant";
+            return (
+              <div
+                key={msg.id}
+                className={`msg-row ${msg.role === "user" ? "msg-row--user" : "msg-row--assistant"}`}
+              >
+                {/* Avatar — shown on the outer edge of each bubble */}
+                {msg.role === "assistant" && (
+                  <div className="msg-avatar msg-avatar--assistant">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                      <path d="M2 17l10 5 10-5" />
+                      <path d="M2 12l10 5 10-5" />
+                    </svg>
+                  </div>
+                )}
 
-              <div className={`msg-bubble ${msg.role === "user" ? "msg-bubble--user" : "msg-bubble--assistant"}`}>
-                {/* Role label + time */}
-                <div className="msg-meta">
-                  <span className="msg-role">
-                    {msg.role === "user" ? "You" : "AI Assistant"}
-                  </span>
-                  <span className="msg-time">{formatTime(msg.timestamp)}</span>
-                </div>
+                <div
+                  className={`msg-bubble ${
+                    msg.role === "user"
+                      ? "msg-bubble--user"
+                      : `msg-bubble--assistant ${isGenerating ? "msg-bubble--generating" : ""}`
+                  }`}
+                >
+                  {/* Role label + time */}
+                  <div className="msg-meta">
+                    <span className="msg-role">
+                      {msg.role === "user" ? "You" : "AI Assistant"}
+                    </span>
+                    <span className="msg-time">{formatTime(msg.timestamp)}</span>
+                  </div>
 
-                {/* Message body */}
-                <div className="msg-body">
-                  {msg.role === "assistant" ? (
-                    /* Render markdown for assistant replies */
-                    <ReactMarkdown>{msg.content || "…"}</ReactMarkdown>
-                  ) : (
-                    /* Plain text for user messages */
-                    msg.content.split("\n").map((line, i) => (
-                      <p key={i}>{line || "\u00A0"}</p>
-                    ))
+                  {/* Message body */}
+                  <div className="msg-body">
+                    {msg.role === "assistant" ? (
+                      /* Render markdown for assistant replies, or typing indicator if content is empty */
+                      msg.content ? (
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      ) : isLoading ? (
+                        <div className="typing-indicator">
+                          <span className="typing-dot" />
+                          <span className="typing-dot" />
+                          <span className="typing-dot" />
+                        </div>
+                      ) : (
+                        <span className="msg-empty-fallback">…</span>
+                      )
+                    ) : (
+                      /* Plain text for user messages */
+                      msg.content.split("\n").map((line, i) => (
+                        <p key={i}>{line || "\u00A0"}</p>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Source citations — assistant only */}
+                  {msg.sources && msg.sources.length > 0 && (
+                    <div className="msg-sources">
+                      <span className="msg-sources__label">Sources</span>
+                      {msg.sources.map((source, i) => (
+                        <div key={i} className="msg-source-chip">
+                          <span className="msg-source-chip__name">
+                            📄 {source.filename}
+                          </span>
+                          <span className="msg-source-chip__snippet">
+                            {source.snippet}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                {/* Source citations — assistant only */}
-                {msg.sources && msg.sources.length > 0 && (
-                  <div className="msg-sources">
-                    <span className="msg-sources__label">Sources</span>
-                    {msg.sources.map((source, i) => (
-                      <div key={i} className="msg-source-chip">
-                        <span className="msg-source-chip__name">
-                          📄 {source.filename}
-                        </span>
-                        <span className="msg-source-chip__snippet">
-                          {source.snippet}
-                        </span>
-                      </div>
-                    ))}
+                {msg.role === "user" && (
+                  <div className="msg-avatar msg-avatar--user">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
                   </div>
                 )}
               </div>
-
-              {msg.role === "user" && (
-                <div className="msg-avatar msg-avatar--user">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="msg-row msg-row--assistant">
-            <div className="msg-avatar msg-avatar--assistant">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
-            <div className="msg-bubble msg-bubble--assistant">
-              <div className="typing-indicator">
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-              </div>
-            </div>
-          </div>
+            );
+          })
         )}
 
         <div ref={messagesEndRef} />

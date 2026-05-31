@@ -870,6 +870,21 @@ body {
   30% { transform: translateY(-8px); opacity: 1; }
 }
 
+/* Streaming response cursor */
+.msg-bubble--generating .msg-body > *:last-child::after {
+  content: "▊";
+  display: inline-block;
+  margin-left: 4px;
+  animation: cursorBlink 0.8s step-start infinite;
+  color: var(--accent-indigo);
+  font-size: 0.95em;
+  vertical-align: middle;
+}
+
+@keyframes cursorBlink {
+  50% { opacity: 0; }
+}
+
 /* Input area */
 
 .chat-input-container {
