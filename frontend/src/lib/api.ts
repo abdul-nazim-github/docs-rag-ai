@@ -6,7 +6,7 @@
  */
 
 import type {
-  DocumentListResponse,
+  DocumentInfo,
   HealthResponse,
   QueryResponse,
   UploadResponse,
@@ -94,18 +94,18 @@ export async function queryRAGStream(question: string): Promise<Response> {
 /**
  * Fetch the list of all uploaded documents.
  */
-export async function getDocuments(): Promise<DocumentListResponse> {
-  return apiFetch<DocumentListResponse>("/api/documents");
+export async function getDocuments(): Promise<DocumentInfo[]> {
+  return apiFetch<DocumentInfo[]>("/api/documents");
 }
 
 /**
- * Delete a specific uploaded document by filename.
+ * Delete a specific uploaded document by ID.
  */
 export async function deleteDocument(
-  filename: string
-): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>(
-    `/api/documents/${encodeURIComponent(filename)}`,
+  id: string
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/documents/${encodeURIComponent(id)}`,
     { method: "DELETE" }
   );
 }

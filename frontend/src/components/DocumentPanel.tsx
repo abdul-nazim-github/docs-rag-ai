@@ -21,6 +21,7 @@ export default function DocumentPanel({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DocumentInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Upload handler ────────────────────────────────────────────────────────
@@ -59,13 +60,13 @@ export default function DocumentPanel({
   // ── Delete handler ────────────────────────────────────────────────────────
 
   const handleDelete = useCallback(
-    async (filename: string) => {
+    async (id: string) => {
       try {
-        await deleteDocument(filename);
+        await deleteDocument(id);
         onDocumentsChange();
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : `Failed to delete ${filename}`
+          err instanceof Error ? err.message : "Failed to delete document"
         );
       }
     },
@@ -222,7 +223,7 @@ export default function DocumentPanel({
           </div>
         ) : (
           documents.map((doc) => (
-            <div key={doc.filename} className="document-item">
+            <div key={doc.id} className="document-item">
               <div className="document-info">
                 <span className="document-icon">
                   {getFileIcon(doc.filename)}
@@ -240,7 +241,7 @@ export default function DocumentPanel({
                 className="document-delete"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete(doc.filename);
+                  setDeleteTarget(doc);
                 }}
                 aria-label={`Delete ${doc.filename}`}
                 title="Delete document"
@@ -263,6 +264,34 @@ export default function DocumentPanel({
           ))
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete {deleteTarget.filename}?</h3>
+            <p className="modal-body">This action cannot be undone.</p>
+            <div className="modal-actions">
+              <button
+                className="btn btn--secondary"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn--danger"
+                onClick={async () => {
+                  const targetId = deleteTarget.id;
+                  setDeleteTarget(null);
+                  await handleDelete(targetId);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

@@ -31,14 +31,10 @@ export interface UploadResponse {
 // ── Documents ─────────────────────────────────────────────────────────────────
 
 export interface DocumentInfo {
+  id: string;
   filename: string;
   size: number;
   uploaded_at: string;
-}
-
-export interface DocumentListResponse {
-  documents: DocumentInfo[];
-  total: number;
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

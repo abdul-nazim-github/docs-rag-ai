@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # ── Storage paths (relative to backend/) ───────────────────────────────────
     FAISS_INDEX_PATH: str = "vectorstore/faiss_index"
     UPLOAD_DIR: str = "data/uploads"
+    DOCUMENTS_REGISTRY: str = "data/documents.json"
 
     # ── CORS ───────────────────────────────────────────────────────────────────
     FRONTEND_URL: str = "http://localhost:3000"
@@ -64,6 +65,11 @@ class Settings(BaseSettings):
     def upload_dir_abs_path(self) -> Path:
         """Absolute path to the upload directory."""
         return BASE_DIR / self.UPLOAD_DIR
+
+    @property
+    def documents_registry_abs_path(self) -> Path:
+        """Absolute path to the documents registry JSON file."""
+        return BASE_DIR / self.DOCUMENTS_REGISTRY
 
     @property
     def cors_origins(self) -> list[str]:

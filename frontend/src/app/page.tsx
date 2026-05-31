@@ -19,7 +19,7 @@ export default function Home() {
   const fetchDocuments = useCallback(async () => {
     try {
       const response = await getDocuments();
-      setDocuments(response.documents);
+      setDocuments(response);
     } catch {
       // Backend might not be running yet — fail silently
       console.warn("Could not fetch documents. Is the backend running?");

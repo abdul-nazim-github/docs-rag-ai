@@ -55,6 +55,10 @@ async def lifespan(app: FastAPI):
     settings.upload_dir_abs_path.mkdir(parents=True, exist_ok=True)
     settings.faiss_index_abs_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Initialize document registry and verify index
+    from app.services.document_service import document_service
+    document_service.initialize()
+
     logger.info("  Model        : %s", settings.OPENAI_MODEL)
     logger.info("  FAISS path   : %s", settings.faiss_index_abs_path)
     logger.info("  Upload dir   : %s", settings.upload_dir_abs_path)

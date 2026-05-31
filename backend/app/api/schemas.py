@@ -64,10 +64,19 @@ class DocumentInfo(BaseModel):
     uploaded_at: str = Field(..., description="ISO-8601 upload timestamp.")
 
 
+class DocumentRegistryItem(BaseModel):
+    """Metadata for a document in the registry."""
+
+    id: str = Field(..., description="Unique ID of the document (UUID).")
+    filename: str = Field(..., description="Name of the file.")
+    uploaded_at: str = Field(..., description="ISO-8601 upload timestamp.")
+    size: int = Field(..., description="File size in bytes.")
+
+
 class DocumentListResponse(BaseModel):
     """List of all uploaded documents."""
 
-    documents: list[DocumentInfo] = Field(default_factory=list)
+    documents: list[DocumentRegistryItem] = Field(default_factory=list)
     total: int = Field(0, description="Total number of uploaded documents.")
 
 
