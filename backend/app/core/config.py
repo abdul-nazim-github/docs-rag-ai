@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     # ── Computed helpers ───────────────────────────────────────────────────────
 
     @property
+    def BASE_DIR(self) -> Path:
+        """Absolute path to the base directory (backend/)."""
+        return BASE_DIR
+
+    @property
     def faiss_index_abs_path(self) -> Path:
         """Absolute path to the FAISS index directory."""
         return BASE_DIR / self.FAISS_INDEX_PATH
