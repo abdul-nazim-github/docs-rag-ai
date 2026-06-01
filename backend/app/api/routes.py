@@ -44,12 +44,6 @@ router = APIRouter(tags=["rag"])
     status_code=status.HTTP_201_CREATED,
     summary="Upload and index a document",
 )
-@router.post(
-    "/upload",
-    response_model=UploadResponse,
-    status_code=status.HTTP_201_CREATED,
-    include_in_schema=False,
-)
 async def upload_document(file: UploadFile) -> UploadResponse:
     """
     Upload a document file, process it into chunks, and add to the
@@ -99,11 +93,6 @@ async def upload_document(file: UploadFile) -> UploadResponse:
     "/api/query",
     summary="Query the RAG chain (streaming)",
 )
-@router.post(
-    "/query",
-    summary="Query the RAG chain (streaming)",
-    include_in_schema=False,
-)
 async def query_documents(request: QueryRequest) -> StreamingResponse:
     """
     Ask a question about the uploaded documents. The RAG chain retrieves
@@ -128,12 +117,6 @@ async def query_documents(request: QueryRequest) -> StreamingResponse:
     response_model=list[DocumentRegistryItem],
     summary="List uploaded documents from registry",
 )
-@router.get(
-    "/documents",
-    response_model=list[DocumentRegistryItem],
-    summary="List uploaded documents from registry",
-    include_in_schema=False,
-)
 async def list_documents() -> list[DocumentRegistryItem]:
     """Return metadata registry for all uploaded documents."""
     try:
@@ -151,12 +134,6 @@ async def list_documents() -> list[DocumentRegistryItem]:
     "/api/documents/{document_id}",
     status_code=status.HTTP_200_OK,
     summary="Delete a specific document by its unique ID",
-)
-@router.delete(
-    "/documents/{document_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Delete a specific document by its unique ID",
-    include_in_schema=False,
 )
 async def delete_document(document_id: str) -> dict:
     """
@@ -189,12 +166,6 @@ async def delete_document(document_id: str) -> dict:
     "/api/health",
     response_model=HealthResponse,
     summary="Health check",
-)
-@router.get(
-    "/health",
-    response_model=HealthResponse,
-    summary="Health check",
-    include_in_schema=False,
 )
 async def health_check() -> HealthResponse:
     """Return the application health status and index statistics."""
