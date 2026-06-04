@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# commit-msg hook: require 'AI-Checked: yes' in commit messages for non-doc commits
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+
+# If commit is docs-only (only changes .md under AI/ or .github templates), allow
+DOC_ONLY=true
+while read -r file; do
+  case "$file" in
+    *.md)
+      ;; # docs ok
+    .github/*)
+      ;; # templates ok
+    *)
+      DOC_ONLY=false
+      break
+      ;;
+  esac
+done < <(git diff --cached --name-only)
+
+if [ "$DOC_ONLY" = true ]; then
+  exit 0
+fi
+
+grep -q "AI-Checked: yes" "$MSG_FILE" || {
+  echo "Commit message must include 'AI-Checked: yes' for changes that may affect RAG behavior." >&2
+  echo "If this is a documentation-only change, document-only commits are allowed." >&2
+  exit 1
+}
+
+exit 0
